@@ -16,6 +16,7 @@ import { EventBlock } from './EventBlock';
 import { EventDetailsPopover } from './EventDetailsPopover';
 import { useWeatherForecast } from '../hooks/useWeatherForecast';
 import { weatherIcon } from '../types/weather-icons';
+import { useTranslation } from '../i18n';
 
 interface WeekCalendarProps {
   events: CalendarEvent[];
@@ -24,6 +25,7 @@ interface WeekCalendarProps {
   onSlotClick: (date: string, hour: number) => void;
   onEventReschedule?: (event: CalendarEvent, newDate: string, newHour: number) => void;
   onVisibleWeekChange?: (weekStart: Date) => void;
+  weekStartsOn: 0 | 1;
 }
 
 const START_HOUR = 7;
@@ -67,9 +69,10 @@ interface MultiDaySpan {
   lane: number;
 }
 
-export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClick, onEventReschedule, onVisibleWeekChange }: WeekCalendarProps) {
+export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClick, onEventReschedule, onVisibleWeekChange, weekStartsOn }: WeekCalendarProps) {
+  const { t, dateLocale } = useTranslation();
   const today = new Date();
-  const todayWeekStart = startOfWeek(today, { weekStartsOn: 0 });
+  const todayWeekStart = startOfWeek(today, { weekStartsOn });
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const forecast = useWeatherForecast();
@@ -77,9 +80,9 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
   // Week navigation: offset in weeks from today's week (0 = current, +1 = next, -1 = prev)
   const [weekOffset, setWeekOffset] = useState(0);
   const weekStart = useMemo(
-    () => startOfWeek(addWeeks(today, weekOffset), { weekStartsOn: 0 }),
+    () => startOfWeek(addWeeks(today, weekOffset), { weekStartsOn }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [weekOffset],
+    [weekOffset, weekStartsOn],
   );
 
   // Notify parent so it can refetch events for the visible week if needed
@@ -323,12 +326,12 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
   // Week label for header ("Week of Jun 8" or "Jun 8 – 14, 2026")
   const weekLabel = useMemo(() => {
     const end = addDays(weekStart, 6);
-    const sameMonth = format(weekStart, 'MMM') === format(end, 'MMM');
+    const sameMonth = format(weekStart, 'MMM', { locale: dateLocale }) === format(end, 'MMM', { locale: dateLocale });
     if (sameMonth) {
-      return `${format(weekStart, 'MMM d')} – ${format(end, 'd, yyyy')}`;
+      return `${format(weekStart, 'MMM d', { locale: dateLocale })} – ${format(end, 'd, yyyy', { locale: dateLocale })}`;
     }
-    return `${format(weekStart, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`;
-  }, [weekStart]);
+    return `${format(weekStart, 'MMM d', { locale: dateLocale })} – ${format(end, 'MMM d, yyyy', { locale: dateLocale })}`;
+  }, [weekStart, dateLocale]);
 
   const isCurrentWeek = weekOffset === 0;
 
@@ -422,7 +425,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             type="button"
             className="week-nav-btn"
             onClick={() => setWeekOffset((o) => o - 1)}
-            aria-label="Previous week"
+            aria-label={t('weekCalendar.previousWeek')}
           >
             &lsaquo;
           </button>
@@ -431,15 +434,15 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             className={`week-nav-today ${isCurrentWeek ? 'week-nav-today--active' : ''}`}
             onClick={() => setWeekOffset(0)}
             disabled={isCurrentWeek}
-            aria-label="Jump to current week"
+            aria-label={t('weekCalendar.jumpToCurrentWeek')}
           >
-            Today
+            {t('common.today')}
           </button>
           <button
             type="button"
             className="week-nav-btn"
             onClick={() => setWeekOffset((o) => o + 1)}
-            aria-label="Next week"
+            aria-label={t('weekCalendar.nextWeek')}
           >
             &rsaquo;
           </button>
@@ -450,8 +453,8 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             type="button"
             className="week-nav-jump-btn"
             onClick={() => setWeekOffset((o) => o - 4)}
-            aria-label="Back 4 weeks"
-            title="Back 4 weeks"
+            aria-label={t('weekCalendar.back4WeeksAria')}
+            title={t('weekCalendar.back4WeeksAria')}
           >
             -4w
           </button>
@@ -459,8 +462,8 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             type="button"
             className="week-nav-jump-btn"
             onClick={() => setWeekOffset((o) => o + 4)}
-            aria-label="Forward 4 weeks"
-            title="Forward 4 weeks"
+            aria-label={t('weekCalendar.forward4WeeksAria')}
+            title={t('weekCalendar.forward4WeeksAria')}
           >
             +4w
           </button>
@@ -475,7 +478,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             className="week-mobile-nav-btn"
             disabled={mobileGroupIndex === 0}
             onClick={() => setMobileGroupIndex((prev) => Math.max(0, prev - 1))}
-            aria-label="Previous days"
+            aria-label={t('weekCalendar.previousDays')}
           >
             &lsaquo;
           </button>
@@ -486,7 +489,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
                 type="button"
                 className={`week-mobile-dot ${i === mobileGroupIndex ? 'week-mobile-dot--active' : ''}`}
                 onClick={() => setMobileGroupIndex(i)}
-                aria-label={`Day group ${i + 1}`}
+                aria-label={t('weekCalendar.dayGroup', { n: i + 1 })}
               />
             ))}
           </div>
@@ -495,7 +498,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
             className="week-mobile-nav-btn"
             disabled={mobileGroupIndex === maxMobileGroup}
             onClick={() => setMobileGroupIndex((prev) => Math.min(maxMobileGroup, prev + 1))}
-            aria-label="Next days"
+            aria-label={t('weekCalendar.nextDays')}
           >
             &rsaquo;
           </button>
@@ -514,7 +517,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
               key={dayKey}
               className={`week-header-day ${isToday ? 'week-header-day--today' : ''}`}
             >
-              <span className="week-header-day-name">{format(day, 'EEE')}</span>
+              <span className="week-header-day-name">{format(day, 'EEE', { locale: dateLocale })}</span>
               <span className="week-header-day-number">{format(day, 'd')}</span>
               {wx && (
                 <span className="week-header-weather">
@@ -587,7 +590,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
 
           {/* Single all-day events row */}
           <div className="week-allday-row" style={{ gridTemplateColumns: gridCols }}>
-            <div className="week-allday-label">All day</div>
+            <div className="week-allday-label">{t('common.allDay')}</div>
             {days.map((day) => {
               const key = format(day, 'yyyy-MM-dd');
               const dayAllDay = singleAllDayByDay.get(key) || [];
@@ -654,7 +657,7 @@ export function WeekCalendar({ events, hiddenCalendars, onEventClick, onSlotClic
                         onClick={() => onSlotClick(key, hour)}
                         onDragOver={(e) => handleDragOver(key, hour, e)}
                         onDrop={(e) => handleDrop(key, hour, e)}
-                        aria-label={`Add event on ${format(day, 'EEEE')} at ${formatHour(hour)}`}
+                        aria-label={t('weekCalendar.addEventOnAt', { day: format(day, 'EEEE', { locale: dateLocale }), time: formatHour(hour) })}
                       />
                       {/* Ghost preview */}
                       {isGhostTarget && dragEvent && (
